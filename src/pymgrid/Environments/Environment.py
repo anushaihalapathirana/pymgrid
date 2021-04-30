@@ -266,7 +266,7 @@ class Environment(gym.Env):
                 control_dict['grid_export'] = max(0, (1 - action[2]) * min(action[3] * mg.grid.power_export,
                                                                            mg.grid.power_export))
             else:
-                # avoid warnings
+                # put 0 values to avoid warnings
                 control_dict['grid_import'] = 0
                 control_dict['grid_export'] = 0
 
