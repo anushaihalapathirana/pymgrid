@@ -113,6 +113,14 @@ class Environment(gym.Env):
                 return -self.mg.get_cost()/self.mg.parameters['load'].values[0]
         return -self.mg.get_cost()
 
+    def get_reward_co2_cost(self):
+        if self.TRAIN == True:
+            if self.training_reward_smoothing == 'sqrt':
+                return -(self.mg.get_co2_cost()**0.5)
+            if self.training_reward_smoothing == 'peak_load':
+                return -self.mg.get_co2_cost()/self.mg.parameters['load'].values[0]
+        return -self.mg.get_co2_cost()
+
     def get_cost(self):
         return sum(self.mg._df_record_cost['cost'])
 
@@ -140,7 +148,8 @@ class Environment(gym.Env):
 
         # COMPUTE NEW STATE AND REWARD
         self.state = self.transition()
-        self.reward = self.get_reward()
+        # self.reward = self.get_reward() # uncomment this if you want cost as pymgrid tool provided
+        self.reward = self.get_reward_co2_cost() # uncomment this if you want co2 cost optimization
         self.done = self.mg.done
         self.info = {}
         self.round += 1
