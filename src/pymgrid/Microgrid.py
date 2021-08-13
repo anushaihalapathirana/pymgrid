@@ -380,6 +380,7 @@ class Microgrid:
         self._df_record_actual_production = parameters['df_actual_generation']
         self._df_record_cost = parameters['df_cost']
         self._df_record_co2 = parameters['df_co2']
+        self._df_record_co2_cost = {'costco2':[]}
         self._df_cost_per_epochs = []
         self.horizon = horizon
         self._tracking_timestep = 0
@@ -484,6 +485,9 @@ class Microgrid:
         """ Function that returns the cost associated the operation of the last time step. """
         return self._df_record_cost['cost'][-1]
 
+    def get_co2_cost(self):
+        return self._df_record_co2_cost['costco2'][-1]
+    
     def get_co2(self):
         """ Function that returns the co2 emissions associated to the operation of the last time step. """
         return self._df_record_co2['co2'][-1]
@@ -651,6 +655,9 @@ class Microgrid:
 
             self._df_record_cost = self._record_cost({ i:self._df_record_actual_production[i][-1] for i in self._df_record_actual_production},
                                                                self._df_record_cost, self._df_record_co2, self.grid.price_import, self.grid.price_export)
+            
+            self._df_record_co2_cost = self._record_co2_cost(self._df_record_co2_cost, self._df_record_co2)
+
             self._df_record_state = self._update_status(control_dict,
                                                         self._df_record_state, self._next_load, self._next_pv,
                                                         self._next_grid_status, self._next_grid_price_import,
@@ -663,6 +670,7 @@ class Microgrid:
 
             self._df_record_cost = self._record_cost({ i:self._df_record_actual_production[i][-1] for i in self._df_record_actual_production},
                                                      self._df_record_cost, self._df_record_co2)
+            self._df_record_co2_cost = self._record_co2_cost(self._df_record_co2_cost, self._df_record_co2)
             self._df_record_state = self._update_status(control_dict,
                                                         self._df_record_state, self._next_load, self._next_pv)
 
@@ -835,6 +843,7 @@ class Microgrid:
         self._df_record_actual_production = {i:[] for i in self._df_record_actual_production}
         self._df_record_cost = {i:[] for i in self._df_record_cost}
         self._df_record_co2 = {i:[] for i in self._df_record_co2}
+        self._df_record_co2_cost = {i:[] for i in self._df_record_co2_cost}
 
         self._tracking_timestep = 0
 
@@ -1066,7 +1075,7 @@ class Microgrid:
                 p_genset = control_dict['genset']
             except:
                 p_genset = 0
-                print("this microgrid has a genset, you should add a 'genset' field to your control dictionnary")
+                # print("this microgrid has a genset, you should add a 'genset' field to your control dictionnary")
 
             control_dict['genset'] = self._check_constraints_genset(p_genset)
             total_production += control_dict['genset']
@@ -1185,6 +1194,20 @@ class Microgrid:
 
         return df
 
+    def _record_co2_cost(self, df, df_co2):
+        """ This function record the co2 cost of operating the microgrid at each time step."""
+
+        if not isinstance(df, dict):
+            raise TypeError('We know this should be named differently but df needs to be dict, is {}'.format(type(df)))
+        
+        cost = 10
+                # 0.1 by default                         cost getting from _record_co2
+        cost += self.parameters['cost_co2'].values[0] * df_co2['co2'][-1]
+        cost_dict= {'costco2': cost}
+        df['costco2'].append(cost)
+
+        return df
+
     ########################################################
     # PRINT FUNCTIONS
     ########################################################
@@ -1236,7 +1259,14 @@ class Microgrid:
             plt.plot(self._df_record_cost.cumsum())
             plt.show()
 
-
+    def print_cumsum_co2_cost(self):
+        if self._df_record_co2_cost != type(pd.DataFrame()):
+            df = pd.DataFrame(self._df_record_co2_cost)
+            plt.plot(df.cumsum())
+            plt.show()
+        else:
+            plt.plot(self._df_record_co2_cost.cumsum())
+            plt.show()
 
     def print_benchmark_cost(self):
         """
